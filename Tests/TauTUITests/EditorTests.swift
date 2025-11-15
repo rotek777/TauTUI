@@ -16,7 +16,7 @@ struct EditorTests {
         var submitted: String?
         editor.onSubmit = { submitted = $0 }
         editor.handle(input: .raw("hello"))
-        editor.handle(input: .key(.enter, modifiers: []))
+        editor.handle(input: .key(.enter))
         #expect(submitted == "hello")
         #expect(editor.getText().isEmpty)
     }
@@ -33,8 +33,8 @@ struct EditorTests {
     func backspaceMergesLines() async throws {
         let editor = Editor()
         editor.setText("hello\nworld")
-        editor.handle(input: .key(.home, modifiers: []))
-        editor.handle(input: .key(.backspace, modifiers: []))
+        editor.handle(input: .key(.home))
+        editor.handle(input: .key(.backspace))
         #expect(editor.getText() == "helloworld")
     }
 
@@ -46,7 +46,7 @@ struct EditorTests {
         let pasted = (0..<20).map { "line \($0)" }.joined(separator: "\n")
         editor.handle(input: .paste(pasted))
         #expect(editor.getText().contains("[paste #1"))
-        editor.handle(input: .key(.enter, modifiers: []))
+        editor.handle(input: .key(.enter))
         #expect(submitted == pasted)
     }
 
@@ -54,12 +54,12 @@ struct EditorTests {
     func ctrlUAndCtrlKDeleteSegments() async throws {
         let editor = Editor()
         editor.setText("hello world")
-        editor.handle(input: .key(.home, modifiers: []))
+        editor.handle(input: .key(.home))
         editor.handle(input: .key(.character("k"), modifiers: [.control]))
         #expect(editor.getText().isEmpty)
 
         editor.setText("hello world")
-        editor.handle(input: .key(.end, modifiers: []))
+        editor.handle(input: .key(.end))
         editor.handle(input: .key(.character("u"), modifiers: [.control]))
         #expect(editor.getText().isEmpty)
     }
@@ -68,7 +68,7 @@ struct EditorTests {
     func ctrlWDeletesWordBackwards() async throws {
         let editor = Editor()
         editor.setText("hello world")
-        editor.handle(input: .key(.end, modifiers: []))
+        editor.handle(input: .key(.end))
         editor.handle(input: .key(.character("w"), modifiers: [.control]))
         #expect(editor.getText() == "hello ")
     }
@@ -78,11 +78,11 @@ struct EditorTests {
         let editor = Editor()
         editor.setText("hello world")
         editor.handle(input: .key(.character("a"), modifiers: [.control]))
-        editor.handle(input: .key(.character("x"), modifiers: []))
+        editor.handle(input: .key(.character("x")))
         #expect(editor.getText().hasPrefix("x"))
 
         editor.handle(input: .key(.character("e"), modifiers: [.control]))
-        editor.handle(input: .key(.character("!"), modifiers: []))
+        editor.handle(input: .key(.character("!")))
         #expect(editor.getText().hasSuffix("!"))
     }
 
@@ -90,7 +90,7 @@ struct EditorTests {
     func optionBackspaceDeletesWord() async throws {
         let editor = Editor()
         editor.setText("hello world")
-        editor.handle(input: .key(.end, modifiers: []))
+        editor.handle(input: .key(.end))
         editor.handle(input: .key(.backspace, modifiers: [.option]))
         #expect(editor.getText() == "hello ")
     }
@@ -99,7 +99,7 @@ struct EditorTests {
     func optionDeleteForwardDeletesWord() async throws {
         let editor = Editor()
         editor.setText("hello world")
-        editor.handle(input: .key(.home, modifiers: []))
+        editor.handle(input: .key(.home))
         editor.handle(input: .key(.delete, modifiers: [.option]))
         #expect(editor.getText() == " world")
     }
@@ -131,8 +131,8 @@ struct EditorTests {
         editor.setAutocompleteProvider(provider)
 
         editor.handle(input: .raw("hel"))
-        editor.handle(input: .key(.tab, modifiers: [])) // show suggestions
-        editor.handle(input: .key(.tab, modifiers: [])) // accept first item
+        editor.handle(input: .key(.tab)) // show suggestions
+        editor.handle(input: .key(.tab)) // accept first item
 
         #expect(editor.getText().contains("hello.txt"))
     }
@@ -144,8 +144,8 @@ struct EditorTests {
         editor.setAutocompleteProvider(provider)
 
         editor.handle(input: .raw("/cl"))
-        editor.handle(input: .key(.tab, modifiers: []))
-        editor.handle(input: .key(.tab, modifiers: []))
+        editor.handle(input: .key(.tab))
+        editor.handle(input: .key(.tab))
 
         #expect(editor.getText().hasPrefix("/clear "))
     }
@@ -163,10 +163,10 @@ struct EditorTests {
     func arrowLeftAndRightMoveCursor() throws {
         let editor = Editor()
         editor.setText("hi")
-        editor.handle(input: .key(.arrowLeft, modifiers: []))
+        editor.handle(input: .key(.arrowLeft))
         editor.handle(input: .raw("X"))
         #expect(editor.getText() == "hXi")
-        editor.handle(input: .key(.arrowRight, modifiers: []))
+        editor.handle(input: .key(.arrowRight))
         editor.handle(input: .raw("!"))
         #expect(editor.getText() == "hXi!")
     }
@@ -175,10 +175,10 @@ struct EditorTests {
     func arrowUpAndDownNavigateLines() throws {
         let editor = Editor()
         editor.setText("foo\nbar")
-        editor.handle(input: .key(.arrowUp, modifiers: []))
+        editor.handle(input: .key(.arrowUp))
         editor.handle(input: .raw("*"))
         #expect(editor.getText().starts(with: "foo*"))
-        editor.handle(input: .key(.arrowDown, modifiers: []))
+        editor.handle(input: .key(.arrowDown))
         editor.handle(input: .raw("!"))
         #expect(editor.getText().hasSuffix("bar!"))
     }
@@ -187,10 +187,10 @@ struct EditorTests {
     func homeAndEndKeysMoveToLineBounds() throws {
         let editor = Editor()
         editor.setText("hello")
-        editor.handle(input: .key(.home, modifiers: []))
+        editor.handle(input: .key(.home))
         editor.handle(input: .raw("X"))
         #expect(editor.getText() == "Xhello")
-        editor.handle(input: .key(.end, modifiers: []))
+        editor.handle(input: .key(.end))
         editor.handle(input: .raw("!"))
         #expect(editor.getText() == "Xhello!")
     }
@@ -199,8 +199,8 @@ struct EditorTests {
     func deleteKeyRemovesForwardCharacters() throws {
         let editor = Editor()
         editor.setText("hello")
-        editor.handle(input: .key(.home, modifiers: []))
-        editor.handle(input: .key(.delete, modifiers: []))
+        editor.handle(input: .key(.home))
+        editor.handle(input: .key(.delete))
         #expect(editor.getText() == "ello")
     }
 
@@ -208,10 +208,10 @@ struct EditorTests {
     func deleteKeyMergesNextLine() throws {
         let editor = Editor()
         editor.setText("foo\nbar")
-        editor.handle(input: .key(.home, modifiers: []))
-        editor.handle(input: .key(.arrowUp, modifiers: []))
-        editor.handle(input: .key(.end, modifiers: []))
-        editor.handle(input: .key(.delete, modifiers: []))
+        editor.handle(input: .key(.home))
+        editor.handle(input: .key(.arrowUp))
+        editor.handle(input: .key(.end))
+        editor.handle(input: .key(.delete))
         #expect(editor.getText() == "foobar")
     }
 }

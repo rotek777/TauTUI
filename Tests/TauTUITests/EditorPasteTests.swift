@@ -16,7 +16,7 @@ struct EditorPasteTests {
         editor.handle(input: .paste(big1))
         editor.handle(input: .raw(" middle "))
         editor.handle(input: .paste(big2))
-        editor.handle(input: .key(.enter, modifiers: []))
+        editor.handle(input: .key(.enter))
 
         #expect(submitted == big1 + " middle " + big2)
     }
@@ -29,7 +29,7 @@ struct EditorPasteTests {
 
         editor.handle(input: .paste("hello")) // marker #1
         editor.handle(input: .raw(" [paste #12 +x lines]")) // literal text, not real marker we created
-        editor.handle(input: .key(.enter, modifiers: []))
+        editor.handle(input: .key(.enter))
 
         #expect(submitted?.contains("[paste #12") == true)
         #expect(submitted?.starts(with: "hello") == true)

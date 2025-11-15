@@ -13,8 +13,8 @@ struct SelectListTests {
         let list = SelectList(items: items, maxVisible: 2)
         var selected: SelectItem?
         list.onSelect = { selected = $0 }
-        list.handle(input: .key(.arrowDown, modifiers: []))
-        list.handle(input: .key(.enter, modifiers: []))
+        list.handle(input: .key(.arrowDown))
+        list.handle(input: .key(.enter))
         #expect(selected?.value == "two")
     }
 

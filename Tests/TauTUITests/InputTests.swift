@@ -8,17 +8,17 @@ struct InputTests {
         var submitted: String?
         let input = Input()
         input.onSubmit = { submitted = $0 }
-        input.handle(input: .key(.character("h"), modifiers: []))
-        input.handle(input: .key(.character("i"), modifiers: []))
-        input.handle(input: .key(.enter, modifiers: []))
+        input.handle(input: .key(.character("h")))
+        input.handle(input: .key(.character("i")))
+        input.handle(input: .key(.enter))
         #expect(submitted == "hi")
     }
 
     @Test
     func backspaceRemovesCharacters() async throws {
         let input = Input(value: "hello")
-        input.handle(input: .key(.backspace, modifiers: []))
-        input.handle(input: .key(.backspace, modifiers: []))
+        input.handle(input: .key(.backspace))
+        input.handle(input: .key(.backspace))
         #expect(input.value == "hel")
     }
 }
