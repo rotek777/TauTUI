@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import TauTUI
 @testable import TauTUIInternal
 
@@ -12,6 +13,15 @@ private final class DummyComponent: Component {
     func render(width: Int) -> [String] {
         lines
     }
+}
+
+private final class DummyHandler: Component {
+    private let handler: @Sendable (TerminalInput) -> Void
+    init(handler: @escaping @Sendable (TerminalInput) -> Void) {
+        self.handler = handler
+    }
+    nonisolated func render(width: Int) -> [String] { [] }
+    nonisolated func handle(input: TerminalInput) { handler(input) }
 }
 
 @Suite("TUI Rendering")
@@ -58,5 +68,39 @@ struct TUIRenderingTests {
         #expect(last.contains("swift"))
         #expect(!last.contains("\u{001B}[3J")) // no full clear
         #expect(last.contains("\u{001B}[?2026h"))
+    }
+
+    @Test
+    func keyEventNormalization_metaPrefix() throws {
+        // ESC b -> Option+Left, ESC f -> Option+Right, ESC d -> Option+Delete, ESC DEL -> Option+Backspace
+        let parser = ProcessTerminal()
+        let events = parser.parseForTests("\u{001B}b\u{001B}f\u{001B}d" + String(bytes: [0x1B, 0x7F], encoding: .utf8)!)
+        #expect(events.contains(where: { if case .key(.arrowLeft, let m) = $0 { return m.contains(.option) } ; return false }))
+        #expect(events.contains(where: { if case .key(.arrowRight, let m) = $0 { return m.contains(.option) } ; return false }))
+        #expect(events.contains(where: { if case .key(.delete, let m) = $0 { return m.contains(.option) } ; return false }))
+        #expect(events.contains(where: { if case .key(.backspace, let m) = $0 { return m.contains(.option) } ; return false }))
+    }
+
+    @Test
+    func keyEventNormalization_csiModifiers() throws {
+        let parser = ProcessTerminal()
+        let payload = "\u{001B}[1;3D\u{001B}[1;5C\u{001B}[Z"
+        let events = parser.parseForTests(payload)
+        #expect(events.contains(where: { if case .key(.arrowLeft, let m) = $0 { return m == [.option] } ; return false }))
+        #expect(events.contains(where: { if case .key(.arrowRight, let m) = $0 { return m == [.control] } ; return false }))
+        #expect(events.contains(where: { if case .key(.tab, let m) = $0 { return m.contains(.shift) } ; return false }))
+    }
+}
+
+private final class Locked<Value>: @unchecked Sendable {
+    private var valueStorage: Value
+    private let lock = NSLock()
+
+    init(_ value: Value) { self.valueStorage = value }
+
+    var value: Value { lock.withLock { valueStorage } }
+
+    func withMutating(_ mutate: (inout Value) -> Void) {
+        lock.withLock { mutate(&valueStorage) }
     }
 }

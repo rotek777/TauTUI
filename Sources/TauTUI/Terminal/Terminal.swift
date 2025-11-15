@@ -94,6 +94,15 @@ public final class ProcessTerminal: Terminal {
 
     public init() {}
 
+    /// Testing helper: parse a raw input string into `TerminalInput` events
+    /// without starting Dispatch sources. Only used in unit tests.
+    func parseForTests(_ raw: String) -> [TerminalInput] {
+        var captured: [TerminalInput] = []
+        inputHandler = { captured.append($0) }
+        handleRawChunk(raw)
+        return captured
+    }
+
     deinit {
         stop()
     }
@@ -218,7 +227,7 @@ public final class ProcessTerminal: Terminal {
 
     // MARK: - Input parsing
 
-    private func handleRawChunk(_ chunk: String) {
+    fileprivate func handleRawChunk(_ chunk: String) {
         guard !chunk.isEmpty else { return }
         inputHandler?(.raw(chunk))
         pendingInput.append(chunk)
