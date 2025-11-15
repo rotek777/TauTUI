@@ -5,13 +5,8 @@ public struct TextEditorConfig {
 }
 
 public final class Editor: Component {
-    private struct EditorState {
-        var lines: [String] = [""]
-        var cursorLine: Int = 0
-        var cursorCol: Int = 0
-    }
-
-    private var state = EditorState()
+    // Pure, Sendable buffer keeps mutations testable and UI-free.
+    private var buffer = EditorBuffer()
     private var config = TextEditorConfig()
 
     // Autocomplete is optional and pluggable (slash commands + file completion).
@@ -66,21 +61,17 @@ public final class Editor: Component {
     }
 
     public func setText(_ text: String) {
-        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
-        state.lines = normalized.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        if state.lines.isEmpty { state.lines = [""] }
-        state.cursorLine = state.lines.count - 1
-        state.cursorCol = state.lines[state.cursorLine].count
+        buffer.setText(text)
         onChange?(getText())
     }
 
     public func getText() -> String {
-        state.lines.joined(separator: "\n")
+        buffer.text
     }
 
     private func layout(width: Int) -> [String] {
         var lines: [String] = []
-        for (index, line) in state.lines.enumerated() {
+        for (index, line) in buffer.lines.enumerated() {
             if line.count <= width {
                 lines.append(renderLine(line: line, cursorLine: index))
             } else {
@@ -102,10 +93,10 @@ public final class Editor: Component {
     }
 
     private func renderLine(line: String, cursorLine: Int, offset: Int = 0) -> String {
-        if cursorLine == state.cursorLine,
-           state.cursorCol >= offset,
-           state.cursorCol <= offset + line.count {
-            let relative = state.cursorCol - offset
+        if cursorLine == buffer.cursorLine,
+           buffer.cursorCol >= offset,
+           buffer.cursorCol <= offset + line.count {
+            let relative = buffer.cursorCol - offset
             let idx = line.index(line.startIndex, offsetBy: min(max(relative, 0), line.count))
             var rendered = line
             if relative < line.count {
@@ -216,9 +207,9 @@ public final class Editor: Component {
                 moveCursor(lineDelta: 0, columnDelta: 1)
             }
         case .home:
-            state.cursorCol = 0
+            buffer = withMutatingBuffer { buf in buf.cursorCol = 0 }
         case .end:
-            state.cursorCol = state.lines[state.cursorLine].count
+            buffer = withMutatingBuffer { buf in buf.cursorCol = buf.lines[buf.cursorLine].count }
         case .character(let char):
             if modifiers.contains(.control) {
                 switch char.lowercased() {
@@ -240,11 +231,7 @@ public final class Editor: Component {
     }
 
     private func insertCharacter(_ character: String) {
-        var line = state.lines[state.cursorLine]
-        let index = line.index(line.startIndex, offsetBy: state.cursorCol)
-        line.insert(contentsOf: character, at: index)
-        state.lines[state.cursorLine] = line
-        state.cursorCol += character.count
+        buffer = withMutatingBuffer { buf in buf.insertCharacter(character) }
         onChange?(getText())
         if !isAutocompleting {
             triggerAutocomplete(explicit: false)
@@ -254,90 +241,29 @@ public final class Editor: Component {
     }
 
     private func insertNewLine() {
-        let line = state.lines[state.cursorLine]
-        let index = line.index(line.startIndex, offsetBy: state.cursorCol)
-        let before = String(line[..<index])
-        let after = String(line[index...])
-        state.lines[state.cursorLine] = before
-        state.lines.insert(after, at: state.cursorLine + 1)
-        state.cursorLine += 1
-        state.cursorCol = 0
+        buffer = withMutatingBuffer { buf in buf.insertNewLine() }
         onChange?(getText())
     }
 
     private func backspace() {
-        if state.cursorCol > 0 {
-            var line = state.lines[state.cursorLine]
-            let index = line.index(line.startIndex, offsetBy: state.cursorCol - 1)
-            line.remove(at: index)
-            state.lines[state.cursorLine] = line
-            state.cursorCol -= 1
-        } else if state.cursorLine > 0 {
-            let current = state.lines.remove(at: state.cursorLine)
-            state.cursorLine -= 1
-            state.cursorCol = state.lines[state.cursorLine].count
-            state.lines[state.cursorLine] += current
-        }
+        buffer = withMutatingBuffer { buf in buf.backspace() }
         onChange?(getText())
     }
 
     private func deleteForward() {
-        var line = state.lines[state.cursorLine]
-        guard state.cursorCol < line.count else {
-            if state.cursorLine < state.lines.count - 1 {
-                line += state.lines.remove(at: state.cursorLine + 1)
-                state.lines[state.cursorLine] = line
-            }
-            return
-        }
-        let index = line.index(line.startIndex, offsetBy: state.cursorCol)
-        line.remove(at: index)
-        state.lines[state.cursorLine] = line
+        buffer = withMutatingBuffer { buf in buf.deleteForward() }
         onChange?(getText())
     }
 
     private func deleteWordForward() {
-        var line = state.lines[state.cursorLine]
-        // If we're at EOL, try to merge the next line—mirrors typical shell Alt+D behavior.
-        guard state.cursorCol < line.count else {
-            if state.cursorLine < state.lines.count - 1 {
-                line += state.lines.remove(at: state.cursorLine + 1)
-                state.lines[state.cursorLine] = line
-                onChange?(getText())
-            }
-            return
+        buffer = withMutatingBuffer { buf in
+            buf.deleteWordForward(isBoundary: isBoundary)
         }
-
-        var deleteTo = state.cursorCol
-        // First skip any whitespace/punctuation just ahead of the cursor.
-        while deleteTo < line.count {
-            let ch = line[line.index(line.startIndex, offsetBy: deleteTo)]
-            if ch.isWhitespace || isPunctuation(ch) {
-                deleteTo += 1
-            } else {
-                break
-            }
-        }
-        // Then delete the next word.
-        while deleteTo < line.count {
-            let ch = line[line.index(line.startIndex, offsetBy: deleteTo)]
-            if ch.isWhitespace || isPunctuation(ch) { break }
-            deleteTo += 1
-        }
-
-        let start = line.index(line.startIndex, offsetBy: state.cursorCol)
-        let end = line.index(line.startIndex, offsetBy: deleteTo)
-        line.removeSubrange(start..<end)
-        state.lines[state.cursorLine] = line
         onChange?(getText())
     }
 
     private func moveCursor(lineDelta: Int, columnDelta: Int) {
-        let newLine = min(max(state.cursorLine + lineDelta, 0), state.lines.count - 1)
-        let targetLine = state.lines[newLine]
-        let newCol = min(max(state.cursorCol + columnDelta, 0), targetLine.count)
-        state.cursorLine = newLine
-        state.cursorCol = newCol
+        buffer = withMutatingBuffer { buf in buf.moveCursor(lineDelta: lineDelta, columnDelta: columnDelta) }
     }
 
     private func submit() {
@@ -349,7 +275,7 @@ public final class Editor: Component {
                 text = regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: paste)
             }
         }
-        state = EditorState()
+        buffer = EditorBuffer()
         pastes.removeAll()
         pasteCounter = 0
         onChange?("")
@@ -357,77 +283,33 @@ public final class Editor: Component {
     }
 
     private func deleteToStartOfLine() {
-        let line = state.lines[state.cursorLine]
-        let index = line.index(line.startIndex, offsetBy: state.cursorCol)
-        state.lines[state.cursorLine] = String(line[index...])
-        state.cursorCol = 0
+        buffer = withMutatingBuffer { buf in buf.deleteToStartOfLine() }
         onChange?(getText())
     }
 
     private func deleteToEndOfLine() {
-        let line = state.lines[state.cursorLine]
-        let index = line.index(line.startIndex, offsetBy: state.cursorCol)
-        state.lines[state.cursorLine] = String(line[..<index])
+        buffer = withMutatingBuffer { buf in buf.deleteToEndOfLine() }
         onChange?(getText())
     }
 
     private func deleteWordBackwards() {
-        var line = state.lines[state.cursorLine]
-        guard !line.isEmpty, state.cursorCol > 0 else {
-            backspace()
-            return
+        buffer = withMutatingBuffer { buf in
+            buf.deleteWordBackwards(isBoundary: isBoundary)
         }
-        var deleteFrom = state.cursorCol
-        while deleteFrom > 0 {
-            let prevIndex = line.index(line.startIndex, offsetBy: deleteFrom - 1)
-            let ch = line[prevIndex]
-            if ch.isWhitespace || isPunctuation(ch) {
-                break
-            }
-            deleteFrom -= 1
-        }
-        let start = line.index(line.startIndex, offsetBy: deleteFrom)
-        let end = line.index(line.startIndex, offsetBy: state.cursorCol)
-        line.removeSubrange(start..<end)
-        state.lines[state.cursorLine] = line
-        state.cursorCol = deleteFrom
         onChange?(getText())
     }
 
     private func moveByWord(_ direction: Int) {
-        guard direction != 0 else { return }
-        let line = state.lines[state.cursorLine]
-        var idx = state.cursorCol
-        func isBoundary(_ ch: Character) -> Bool { ch.isWhitespace || isPunctuation(ch) }
-        if direction > 0 {
-            while idx < line.count {
-                let ch = line[line.index(line.startIndex, offsetBy: idx)]
-                if isBoundary(ch) {
-                    idx += 1
-                } else { break }
-            }
-            while idx < line.count {
-                let ch = line[line.index(line.startIndex, offsetBy: idx)]
-                if isBoundary(ch) { break }
-                idx += 1
-            }
-        } else {
-            while idx > 0 {
-                let ch = line[line.index(line.startIndex, offsetBy: idx - 1)]
-                if isBoundary(ch) { idx -= 1 } else { break }
-            }
-            while idx > 0 {
-                let ch = line[line.index(line.startIndex, offsetBy: idx - 1)]
-                if isBoundary(ch) { break }
-                idx -= 1
-            }
-        }
-        state.cursorCol = max(0, min(line.count, idx))
+        buffer = withMutatingBuffer { buf in buf.moveByWord(direction, isBoundary: isBoundary) }
     }
 
     private func isPunctuation(_ ch: Character) -> Bool {
         let punctuation: Set<Character> = Set("(){}[]<>.,;:'\"!?+-=*/\\|&%^$#@~`")
         return punctuation.contains(ch)
+    }
+
+    private func isBoundary(_ ch: Character) -> Bool {
+        ch.isWhitespace || isPunctuation(ch)
     }
 
     private func handlePaste(_ text: String) {
@@ -448,41 +330,47 @@ public final class Editor: Component {
             }
             return
         }
-        let currentLine = state.lines[state.cursorLine]
-        let before = currentLine.prefix(state.cursorCol)
-        let after = currentLine.suffix(currentLine.count - state.cursorCol)
-        state.lines[state.cursorLine] = String(before) + String(lines.first ?? "")
-        var insertionIndex = state.cursorLine + 1
+        let currentLine = buffer.lines[buffer.cursorLine]
+        let before = currentLine.prefix(buffer.cursorCol)
+        let after = currentLine.suffix(currentLine.count - buffer.cursorCol)
+        buffer = withMutatingBuffer { buf in
+            buf.lines[buf.cursorLine] = String(before) + String(lines.first ?? "")
+        }
+        var insertionIndex = buffer.cursorLine + 1
         for middle in lines.dropFirst().dropLast() {
-            state.lines.insert(String(middle), at: insertionIndex)
+            buffer = withMutatingBuffer { buf in buf.lines.insert(String(middle), at: insertionIndex) }
             insertionIndex += 1
         }
         if let last = lines.last {
-            state.lines.insert(String(last) + String(after), at: insertionIndex)
-            state.cursorLine = insertionIndex
-            state.cursorCol = String(last).count
+            buffer = withMutatingBuffer { buf in
+                buf.lines.insert(String(last) + String(after), at: insertionIndex)
+                buf.cursorLine = insertionIndex
+                buf.cursorCol = String(last).count
+            }
         }
         onChange?(getText())
     }
 
     private func triggerAutocomplete(explicit: Bool) {
         guard let provider = autocompleteProvider else { return }
-        let suggestion = provider.getSuggestions(lines: state.lines, cursorLine: state.cursorLine, cursorCol: state.cursorCol)
+        let suggestion = provider.getSuggestions(lines: buffer.lines, cursorLine: buffer.cursorLine, cursorCol: buffer.cursorCol)
         if let suggestion {
             autocompletePrefix = suggestion.prefix
             autocompleteList = SelectList(items: suggestion.items.map { SelectItem(value: $0.value, label: $0.label, description: $0.description) }, maxVisible: 5)
             autocompleteList?.onSelect = { [weak self] selected in
                 guard let self else { return }
                 let result = provider.applyCompletion(
-                    lines: self.state.lines,
-                    cursorLine: self.state.cursorLine,
-                    cursorCol: self.state.cursorCol,
+                    lines: self.buffer.lines,
+                    cursorLine: self.buffer.cursorLine,
+                    cursorCol: self.buffer.cursorCol,
                     item: AutocompleteItem(value: selected.value, label: selected.label, description: selected.description),
                     prefix: suggestion.prefix
                 )
-                self.state.lines = result.lines
-                self.state.cursorLine = result.cursorLine
-                self.state.cursorCol = result.cursorCol
+                self.buffer = self.withMutatingBuffer { buf in
+                    buf.lines = result.lines
+                    buf.cursorLine = result.cursorLine
+                    buf.cursorCol = result.cursorCol
+                }
                 self.cancelAutocomplete()
                 self.onChange?(self.getText())
             }
@@ -495,7 +383,7 @@ public final class Editor: Component {
 
     private func updateAutocomplete() {
         guard let provider = autocompleteProvider, isAutocompleting else { return }
-        let suggestion = provider.getSuggestions(lines: state.lines, cursorLine: state.cursorLine, cursorCol: state.cursorCol)
+        let suggestion = provider.getSuggestions(lines: buffer.lines, cursorLine: buffer.cursorLine, cursorCol: buffer.cursorCol)
         if let suggestion {
             autocompletePrefix = suggestion.prefix
             autocompleteList = SelectList(items: suggestion.items.map { SelectItem(value: $0.value, label: $0.label, description: $0.description) }, maxVisible: 5)
@@ -519,16 +407,25 @@ public final class Editor: Component {
         }
         let autocompleteItem = AutocompleteItem(value: selected.value, label: selected.label, description: selected.description)
         let result = provider.applyCompletion(
-            lines: state.lines,
-            cursorLine: state.cursorLine,
-            cursorCol: state.cursorCol,
+            lines: buffer.lines,
+            cursorLine: buffer.cursorLine,
+            cursorCol: buffer.cursorCol,
             item: autocompleteItem,
             prefix: autocompletePrefix
         )
-        state.lines = result.lines
-        state.cursorLine = result.cursorLine
-        state.cursorCol = result.cursorCol
+        buffer = withMutatingBuffer { buf in
+            buf.lines = result.lines
+            buf.cursorLine = result.cursorLine
+            buf.cursorCol = result.cursorCol
+        }
         cancelAutocomplete()
         onChange?(getText())
+    }
+
+    /// Helper to mutate the value-type buffer while keeping `Editor` reference semantics.
+    private func withMutatingBuffer(_ mutate: (inout EditorBuffer) -> Void) -> EditorBuffer {
+        var copy = buffer
+        mutate(&copy)
+        return copy
     }
 }

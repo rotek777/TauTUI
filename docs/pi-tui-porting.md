@@ -32,6 +32,7 @@ These are the key decisions, learnings, and a playbook for keeping TauTUI in syn
 - **Autocomplete UI:** uses SelectList; behavior matches pi-tui but navigation tests should be expanded when upstream changes filtering/selection logic.
 - **Render warnings:** none in library/tests. ChatDemo resolves loader by ID to avoid Sendable warnings; keep demos `@MainActor` to stay warning-free.
 - **Key normalization:** ProcessTerminal now emits normalized key events with modifiers (Shift/Ctrl/Option/Meta), including Option+arrow/backspace/delete for word navigation. Components no longer need to parse escape sequences manually.
+- **Editor buffer split:** text mutations live in `EditorBuffer` (Sendable) while UI/autocomplete/rendering stay in `Editor`, making future keybinding changes easier and safer to port.
 
 ## When Upstream Changes: Step-by-Step
 1. **Fetch upstream diff:** inspect `packages/tui/src/*.ts` and `components/*.ts` for logic changes, especially in `tui.ts`, `terminal.ts`, `editor.ts`, `autocomplete.ts`, and component renderers.

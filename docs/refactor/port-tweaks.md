@@ -7,13 +7,10 @@ These tweaks are low-to-medium effort improvements identified during the port. T
 **Action:** Added `Utilities/ANSISequences.swift` and replaced literals in `Core/TUI.swift` and `Terminal/Terminal.swift`.
 **Benefit:** Less duplication, fewer typos, easier future changes.
 
-## 2) Split Editor Logic from UI (Medium Effort, Big Testability Win)
-**Problem:** Editor mixes buffer mutations, autocomplete, and rendering in one class, making Sendable/testing harder.
-**Plan:**
-- Create `EditorBuffer` (Sendable) for lines/cursor/paste markers and mutations (insert/delete/move/by-word).
-- Keep `EditorView` (current render + autocomplete overlay wiring) actor-bound.
-- Rewrite tests to hit `EditorBuffer` directly for shortcut/paste flows; keep render tests minimal.
-**Benefit:** Clear separation, simpler isolation, faster unit tests for buffer logic, easier to align with upstream changes.
+## 2) Split Editor Logic from UI (Done)
+**Problem:** Editor mixed buffer mutations, autocomplete, and rendering.
+**Action:** Introduced `EditorBuffer` (Sendable) to own lines/cursor and word operations; `Editor` now delegates mutations to it while keeping rendering/autocomplete wiring. Tests stay green.
+**Benefit:** Clear separation, simpler isolation, easier future tweaks and upstream syncs.
 
 ## 3) Normalize Key Events at the Terminal Boundary (Done)
 **Problem:** Components parsed escape semantics themselves.
