@@ -30,6 +30,9 @@ let package = Package(
                 .product(name: "Markdown", package: "swift-markdown"),
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "DisplayWidth", package: "swift-displaywidth"),
+            ],
+            swiftSettings: [
+                .unsafeFlags(["-strict-concurrency=complete"], .when(platforms: [.macOS, .linux]))
             ]
         ),
         .executableTarget(
