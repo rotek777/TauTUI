@@ -96,4 +96,19 @@ struct EditorTests {
         editor.handle(input: .key(.delete, modifiers: [.option]))
         #expect(editor.getText() == " world")
     }
+
+    @Test
+    func optionEnterAddsNewlineNotSubmit() async throws {
+        let editor = Editor()
+        editor.setText("hello")
+        editor.handle(input: .key(.enter, modifiers: [.option]))
+        #expect(editor.getText() == "hello\n")
+    }
+
+    @Test
+    func vscodeShiftEnterSequenceAddsNewline() async throws {
+        let editor = Editor()
+        editor.handle(input: .raw("\\\r"))
+        #expect(editor.getText() == "\n")
+    }
 }

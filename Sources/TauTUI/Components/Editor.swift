@@ -115,6 +115,11 @@ public final class Editor: Component {
             isInPaste = true
             buffer = buffer.replacingOccurrences(of: "\u{001B}[200~", with: "")
         }
+
+        // VSCode maps Shift+Enter to "\\\r"; normalize to newline to mirror upstream behavior.
+        if buffer.contains("\\\r") {
+            buffer = buffer.replacingOccurrences(of: "\\\r", with: "\n")
+        }
         if isInPaste {
             pasteBuffer += buffer
             if pasteBuffer.contains("\u{001B}[201~") {
