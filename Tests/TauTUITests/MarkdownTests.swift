@@ -60,7 +60,8 @@ struct MarkdownTests {
         let plain = component.render(width: 80).map { Ansi.stripCodes($0) }
         // Baseline snapshot of current spacing; update if we change alignment logic.
         #expect(plain.contains(where: { $0.contains("│ Left   │ Center │ Right │") }))
-        #expect(plain.contains(where: { $0.contains("│ longer │ mid    │ 123   │") }))
+        #expect(plain.contains(where: { $0.contains("│ a      │   b    │     c │") }))
+        #expect(plain.contains(where: { $0.contains("│ longer │  mid   │   123 │") }))
     }
 
     @Test

@@ -174,6 +174,7 @@ private final class Renderer {
     private func renderTable(_ table: Table) {
         let columnCount = table.columnAlignments.count
         var widths = Array(repeating: 0, count: max(columnCount, 1))
+        let alignments = table.columnAlignments
 
         func measure(cells: [Table.Cell]) {
             for (index, cell) in cells.enumerated() {
@@ -193,7 +194,27 @@ private final class Renderer {
                 let text = renderInline(cell.inlineChildren)
                 let vis = VisibleWidth.measure(text)
                 let padding = max(0, widths[index] - vis)
-                line += text + String(repeating: " ", count: padding)
+                let alignment: Table.ColumnAlignment
+                if index < alignments.count {
+                    alignment = alignments[index] ?? .left
+                } else {
+                    alignment = .left
+                }
+
+                let (leftPad, rightPad): (Int, Int)
+                switch alignment {
+                case .center:
+                    leftPad = padding / 2
+                    rightPad = padding - leftPad
+                case .right:
+                    leftPad = padding
+                    rightPad = 0
+                default:
+                    leftPad = 0
+                    rightPad = padding
+                }
+
+                line += String(repeating: " ", count: leftPad) + text + String(repeating: " ", count: rightPad)
                 line += index == widths.count - 1 ? " │" : " │ "
             }
             lines.append(line)
