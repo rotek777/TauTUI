@@ -194,7 +194,11 @@ public final class Editor: Component {
                 backspace()
             }
         case .delete:
-            deleteForward()
+            if modifiers.contains(.option) {
+                deleteWordForward()
+            } else {
+                deleteForward()
+            }
         case .arrowUp:
             moveCursor(lineDelta: -1, columnDelta: 0)
         case .arrowDown:
@@ -288,6 +292,42 @@ public final class Editor: Component {
         }
         let index = line.index(line.startIndex, offsetBy: state.cursorCol)
         line.remove(at: index)
+        state.lines[state.cursorLine] = line
+        onChange?(getText())
+    }
+
+    private func deleteWordForward() {
+        var line = state.lines[state.cursorLine]
+        // If we're at EOL, try to merge the next line—mirrors typical shell Alt+D behavior.
+        guard state.cursorCol < line.count else {
+            if state.cursorLine < state.lines.count - 1 {
+                line += state.lines.remove(at: state.cursorLine + 1)
+                state.lines[state.cursorLine] = line
+                onChange?(getText())
+            }
+            return
+        }
+
+        var deleteTo = state.cursorCol
+        // First skip any whitespace/punctuation just ahead of the cursor.
+        while deleteTo < line.count {
+            let ch = line[line.index(line.startIndex, offsetBy: deleteTo)]
+            if ch.isWhitespace || isPunctuation(ch) {
+                deleteTo += 1
+            } else {
+                break
+            }
+        }
+        // Then delete the next word.
+        while deleteTo < line.count {
+            let ch = line[line.index(line.startIndex, offsetBy: deleteTo)]
+            if ch.isWhitespace || isPunctuation(ch) { break }
+            deleteTo += 1
+        }
+
+        let start = line.index(line.startIndex, offsetBy: state.cursorCol)
+        let end = line.index(line.startIndex, offsetBy: deleteTo)
+        line.removeSubrange(start..<end)
         state.lines[state.cursorLine] = line
         onChange?(getText())
     }

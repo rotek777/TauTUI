@@ -31,6 +31,7 @@ These are the key decisions, learnings, and a playbook for keeping TauTUI in syn
 - **Editor keybindings:** many are ported (enter/shift-enter, tab, arrows, ctrl-U/K/W, option-word moves). Verify any new upstream shortcuts and align. Option+delete-forward currently relies on delete handling; check against upstream.
 - **Autocomplete UI:** uses SelectList; behavior matches pi-tui but navigation tests should be expanded when upstream changes filtering/selection logic.
 - **Render warnings:** none in library/tests. ChatDemo resolves loader by ID to avoid Sendable warnings; keep demos `@MainActor` to stay warning-free.
+- **Key normalization:** ProcessTerminal now emits normalized key events with modifiers (Shift/Ctrl/Option/Meta), including Option+arrow/backspace/delete for word navigation. Components no longer need to parse escape sequences manually.
 
 ## When Upstream Changes: Step-by-Step
 1. **Fetch upstream diff:** inspect `packages/tui/src/*.ts` and `components/*.ts` for logic changes, especially in `tui.ts`, `terminal.ts`, `editor.ts`, `autocomplete.ts`, and component renderers.
@@ -82,4 +83,3 @@ These are the key decisions, learnings, and a playbook for keeping TauTUI in syn
 ## Contact Points
 - Upstream source of truth: https://github.com/badlogic/pi-mono/tree/main/packages/tui
 - When in doubt about behavior, run upstream Node tests/demos and snapshot expected output, then mirror in Swift tests.
-

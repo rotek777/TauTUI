@@ -65,4 +65,22 @@ struct EditorTests {
         editor.handle(input: .key(.character("w"), modifiers: [.control]))
         #expect(editor.getText() == "hello ")
     }
+
+    @Test
+    func optionBackspaceDeletesWord() async throws {
+        let editor = Editor()
+        editor.setText("hello world")
+        editor.handle(input: .key(.end, modifiers: []))
+        editor.handle(input: .key(.backspace, modifiers: [.option]))
+        #expect(editor.getText() == "hello ")
+    }
+
+    @Test
+    func optionDeleteForwardDeletesWord() async throws {
+        let editor = Editor()
+        editor.setText("hello world")
+        editor.handle(input: .key(.home, modifiers: []))
+        editor.handle(input: .key(.delete, modifiers: [.option]))
+        #expect(editor.getText() == " world")
+    }
 }

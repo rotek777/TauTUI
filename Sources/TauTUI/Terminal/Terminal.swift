@@ -284,6 +284,10 @@ public final class ProcessTerminal: Terminal {
     }
 
     private func parseEscapeSequence() -> ((TerminalKey, KeyModifiers), Int)? {
+        // Normalize everything that starts with ESC so downstream components
+        // only see semantic keys + modifiers. This mirrors xterm-style
+        // modifier encodings (CSI 1;{mod}<letter>/~) and the common "Meta"
+        // prefix (ESC + key) used by macOS terminals for Option/Alt.
         guard pendingInput.first == "\u{001B}" else { return nil }
         let scalars = Array(pendingInput.unicodeScalars)
         guard scalars.count >= 2 else { return nil }
@@ -291,17 +295,36 @@ public final class ProcessTerminal: Terminal {
 
         if second == "[" {
             guard let (sequence, length) = extractCSISequence(from: scalars) else { return nil }
-            return (mapCSISequence(sequence), length)
+            let parsed = mapCSISequence(sequence)
+            return (parsed, length)
         } else if second == "O" {
             guard scalars.count >= 3 else { return nil }
             let seq = String(String.UnicodeScalarView(scalars[0..<3]))
             return (mapSS3Sequence(seq), 3)
         } else {
-            return ((.escape, []), 1)
+            // ESC + key is treated as Option/Meta on most terminals.
+            let consumed = 2
+            if second.value == 0x7F { // ESC + DEL (Option+Backspace)
+                return ((.backspace, [.option]), consumed)
+            }
+            let char = Character(String(second))
+            switch char {
+            case "b": // Option+Left on macOS terminals
+                return ((.arrowLeft, [.option]), consumed)
+            case "f": // Option+Right
+                return ((.arrowRight, [.option]), consumed)
+            case "d": // Option+Delete-forward
+                return ((.delete, [.option]), consumed)
+            default:
+                return ((.character(char), [.option]), consumed)
+            }
         }
     }
 
     private func extractCSISequence(from scalars: [UnicodeScalar]) -> (String, Int)? {
+        // CSI sequences end with 0x40...0x7E (per ECMA-48). We return the full
+        // sequence string and the number of scalars consumed so the caller can
+        // trim pendingInput accurately.
         guard scalars.count >= 3 else { return nil }
         for index in 2..<scalars.count {
             let value = scalars[index].value
@@ -315,20 +338,48 @@ public final class ProcessTerminal: Terminal {
     }
 
     private func mapCSISequence(_ sequence: String) -> (TerminalKey, KeyModifiers) {
-        switch sequence {
-        case "\u{001B}[A": return (.arrowUp, [])
-        case "\u{001B}[B": return (.arrowDown, [])
-        case "\u{001B}[C": return (.arrowRight, [])
-        case "\u{001B}[D": return (.arrowLeft, [])
-        case "\u{001B}[H", "\u{001B}[1~", "\u{001B}[7~": return (.home, [])
-        case "\u{001B}[F", "\u{001B}[4~", "\u{001B}[8~": return (.end, [])
-        case "\u{001B}[3~": return (.delete, [])
-        case "\u{001B}[Z": return (.tab, [.shift])
-        default:
-            if let function = functionKeyNumber(from: sequence) {
-                return (.function(function), [])
+        // Strip leading ESC[ to isolate params/final byte.
+        guard sequence.hasPrefix("\u{001B}[") else { return (.unknown(sequence: sequence), []) }
+        let body = sequence.dropFirst(2)
+        guard let final = body.last else { return (.unknown(sequence: sequence), []) }
+        let paramString = body.dropLast()
+        let params = paramString.isEmpty ? [] : paramString.split(separator: ";").compactMap { Int($0) }
+        let modifiers = params.count >= 2 ? mapModifiers(from: params.last ?? 1) : []
+        let primary = params.first ?? 0
+
+        switch final {
+        case "A": return (.arrowUp, modifiers)
+        case "B": return (.arrowDown, modifiers)
+        case "C": return (.arrowRight, modifiers)
+        case "D": return (.arrowLeft, modifiers)
+        case "H": return (.home, modifiers)
+        case "F": return (.end, modifiers)
+        case "Z":
+            var mods = modifiers
+            mods.insert(.shift) // CSI Z is Shift+Tab; keep explicit flag even if param absent
+            return (.tab, mods)
+        case "~":
+            switch primary {
+            case 1, 7: return (.home, modifiers)
+            case 4, 8: return (.end, modifiers)
+            case 3: return (.delete, modifiers)
+            case 11: return (.function(1), modifiers)
+            case 12: return (.function(2), modifiers)
+            case 13: return (.function(3), modifiers)
+            case 14: return (.function(4), modifiers)
+            case 15: return (.function(5), modifiers)
+            case 17: return (.function(6), modifiers)
+            case 18: return (.function(7), modifiers)
+            case 19: return (.function(8), modifiers)
+            case 20: return (.function(9), modifiers)
+            case 21: return (.function(10), modifiers)
+            case 23: return (.function(11), modifiers)
+            case 24: return (.function(12), modifiers)
+            default:
+                return (.unknown(sequence: sequence), modifiers)
             }
-            return (.unknown(sequence: sequence), [])
+        default:
+            return (.unknown(sequence: sequence), modifiers)
         }
     }
 
@@ -345,31 +396,29 @@ public final class ProcessTerminal: Terminal {
         }
     }
 
-    private func functionKeyNumber(from sequence: String) -> Int? {
-        guard sequence.hasPrefix("\u{001B}[") && sequence.hasSuffix("~") else { return nil }
-        let start = sequence.index(sequence.startIndex, offsetBy: 2)
-        let end = sequence.index(before: sequence.endIndex)
-        let digits = sequence[start..<end]
-        guard let value = Int(digits) else { return nil }
-        switch value {
-        case 11: return 1
-        case 12: return 2
-        case 13: return 3
-        case 14: return 4
-        case 15: return 5
-        case 17: return 6
-        case 18: return 7
-        case 19: return 8
-        case 20: return 9
-        case 21: return 10
-        case 23: return 11
-        case 24: return 12
-        default: return nil
-        }
-    }
-
     private func emitKey(_ key: TerminalKey, modifiers: KeyModifiers = []) {
         inputHandler?(.key(key, modifiers: modifiers))
+    }
+
+    private func mapModifiers(from csiModifier: Int) -> KeyModifiers {
+        // xterm encodes modifiers starting at 1 (no modifiers). 2=Shift,
+        // 3=Alt/Option, 4=Shift+Alt, 5=Ctrl, 6=Shift+Ctrl, 7=Alt+Ctrl,
+        // 8=Shift+Alt+Ctrl. We also map 9..12 to Meta combinations used by
+        // some terminals just in case.
+        switch csiModifier {
+        case 2: return [.shift]
+        case 3: return [.option]
+        case 4: return [.shift, .option]
+        case 5: return [.control]
+        case 6: return [.shift, .control]
+        case 7: return [.option, .control]
+        case 8: return [.shift, .option, .control]
+        case 9: return [.meta]
+        case 10: return [.shift, .meta]
+        case 11: return [.meta, .control]
+        case 12: return [.shift, .meta, .control]
+        default: return []
+        }
     }
 
     private func currentTerminalSize() -> (columns: Int, rows: Int) {

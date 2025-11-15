@@ -15,11 +15,11 @@ These tweaks are low-to-medium effort improvements identified during the port. T
 - Rewrite tests to hit `EditorBuffer` directly for shortcut/paste flows; keep render tests minimal.
 **Benefit:** Clear separation, simpler isolation, faster unit tests for buffer logic, easier to align with upstream changes.
 
-## 3) Normalize Key Events at the Terminal Boundary (Medium)
-**Problem:** Components parse escape semantics themselves.
-**Plan:**
-- Extend `TerminalInput.key` to carry a richer `KeyEvent` (key + modifiers + semantic flags like word-move).
-- Move escape-sequence parsing entirely into `ProcessTerminal`, so `Editor/Input/SelectList` consume normalized events.
+## 3) Normalize Key Events at the Terminal Boundary (Done)
+**Problem:** Components parsed escape semantics themselves.
+**Action:**
+- `ProcessTerminal` now decodes xterm CSI modifiers (Shift/Ctrl/Option/Meta) and Meta-prefix sequences (ESC+key), emitting normalized `TerminalInput.key` events.
+- Option variants for arrows/backspace/delete are surfaced as modifiers so components can offer word motions/deletions without manual escape parsing.
 **Benefit:** Cleaner component code, fewer corner cases, easier to add new shortcuts.
 
 ## 4) Strengthen Markdown Table Fidelity (Optional)
@@ -42,11 +42,10 @@ These tweaks are low-to-medium effort improvements identified during the port. T
 - Keep demo state `@MainActor`; add a tiny wrapper type (e.g., `MainActorLoaderHandle`) or mark Loader demo-only extensions as `@MainActor`.
 **Benefit:** Zero warnings without identity workarounds.
 
-## 7) Align Option+Delete Forward (Parity Polish)
-**Problem:** Option+backspace is implemented; option+delete-forward may behave differently across terminals.
-**Plan:**
-- Add a key test for ESC + DEL (common mapping) and adjust `Editor.handleKey` to drop the word ahead.
-**Benefit:** Closer to pi-tui keybinding behavior.
+## 7) Align Option+Delete Forward (Done)
+**Problem:** Option+backspace was implemented; option+delete-forward differed across terminals.
+**Action:** Terminal now recognizes Option+Delete via CSI modifier codes and Meta-prefix ESC+DEL; Editor deletes the word ahead (Alt+D parity) with coverage in `EditorTests`.
+**Benefit:** Closer to pi-tui keybinding behavior with tests to guard regressions.
 
 ## 8) Package/Build Tweaks
 - Consider a `TauTUIInternal` target for test-only utilities (VirtualTerminal) to keep public API surface lean.

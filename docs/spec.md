@@ -74,7 +74,7 @@ public protocol Terminal: AnyObject {
 ### 6.2 `ProcessTerminal`
 - Uses `swift-system` for file descriptors, `termios` for raw-mode toggling, and DispatchSources for stdin reads + SIGWINCH.
 - Automatically enables/disables bracketed paste (`ESC[?2004h/l`).
-- Converts byte streams into `TerminalInput` events plus raw data for components that require the exact escape sequences (Editor).
+- Converts byte streams into normalized `TerminalInput` key events, decoding CSI modifier codes (Shift/Ctrl/Option/Meta) and Meta-prefix sequences (ESC+key). Components receive option-aware arrows/backspace/delete for word motions/deletions without parsing escapes themselves. Raw data is still surfaced for advanced consumers (Editor paste markers).
 
 ### 6.3 `VirtualTerminal`
 - Lives under `Sources/TauTUI/Terminal` but compiled only for tests via `@testable import`.
