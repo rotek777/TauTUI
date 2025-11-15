@@ -334,7 +334,7 @@ public final class Editor: Component {
                 return
             }
             guard let scalar = char.unicodeScalars.first else { return }
-            if scalar.value >= 32 && scalar.value <= 126 {
+            if scalar.value >= 32, scalar.value <= 126 {
                 partial.append(char)
             }
         }
@@ -448,7 +448,9 @@ public final class Editor: Component {
     private func handleTabCompletion() {
         guard self.autocompleteProvider != nil else { return }
         let currentLine = self.buffer.lines[self.buffer.cursorLine]
-        let cursorIndex = currentLine.index(currentLine.startIndex, offsetBy: min(self.buffer.cursorCol, currentLine.count))
+        let cursorIndex = currentLine.index(
+            currentLine.startIndex,
+            offsetBy: min(self.buffer.cursorCol, currentLine.count))
         let beforeCursor = String(currentLine[..<cursorIndex])
         if beforeCursor.trimmingCharacters(in: .whitespaces).hasPrefix("/") {
             self.handleSlashCommandCompletion()

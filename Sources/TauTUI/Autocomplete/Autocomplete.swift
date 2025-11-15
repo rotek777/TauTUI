@@ -47,8 +47,8 @@ public protocol AutocompleteProvider {
         cursorCol: Int) -> Bool
 }
 
-public extension AutocompleteProvider {
-    func forceFileSuggestions(
+extension AutocompleteProvider {
+    public func forceFileSuggestions(
         lines: [String],
         cursorLine: Int,
         cursorCol: Int) -> AutocompleteSuggestion?
@@ -56,7 +56,7 @@ public extension AutocompleteProvider {
         nil
     }
 
-    func shouldTriggerFileCompletion(
+    public func shouldTriggerFileCompletion(
         lines: [String],
         cursorLine: Int,
         cursorCol: Int) -> Bool
@@ -214,7 +214,7 @@ public final class CombinedAutocompleteProvider: AutocompleteProvider {
            let captureRange = Range(match.range(at: 1), in: text)
         {
             let token = String(text[captureRange])
-            if token.isEmpty && !force {
+            if token.isEmpty, !force {
                 return nil
             }
             if token.contains("/") || token.hasPrefix(".") || token.hasPrefix("~") {
@@ -255,7 +255,7 @@ public final class CombinedAutocompleteProvider: AutocompleteProvider {
             for url in contents {
                 let name = url.lastPathComponent
                 let shouldBypassPrefix = context.forced && searchPrefix.isEmpty
-                if !shouldBypassPrefix && !name.lowercased().hasPrefix(searchPrefix.lowercased()) {
+                if !shouldBypassPrefix, !name.lowercased().hasPrefix(searchPrefix.lowercased()) {
                     continue
                 }
                 let isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false

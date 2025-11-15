@@ -14,12 +14,17 @@ final class KeyLogger: Component {
         var lines: [String] = []
         let banner = String(repeating: "=", count: width)
         lines.append(banner)
-        lines.append("Key Code Tester - Press keys to inspect their events".padding(toLength: width, withPad: " ", startingAt: 0))
+        let subtitle = "Key Code Tester - Press keys to inspect their events"
+        lines.append(subtitle.padding(toLength: width, withPad: " ", startingAt: 0))
         lines.append(banner)
         lines.append("")
 
         for entry in self.log.suffix(self.maxLines) {
-            let padded = entry.count > width ? String(entry.prefix(width)) : entry.padding(toLength: width, withPad: " ", startingAt: 0)
+            let padded = if entry.count > width {
+                String(entry.prefix(width))
+            } else {
+                entry.padding(toLength: width, withPad: " ", startingAt: 0)
+            }
             lines.append(padded)
         }
 
@@ -29,7 +34,8 @@ final class KeyLogger: Component {
         }
 
         lines.append(banner)
-        lines.append("Try Option+Backspace, Ctrl+Arrows, bracketed paste.".padding(toLength: width, withPad: " ", startingAt: 0))
+        let tip = "Try Option+Backspace, Ctrl+Arrows, bracketed paste."
+        lines.append(tip.padding(toLength: width, withPad: " ", startingAt: 0))
         lines.append("Press Ctrl+C to exit.".padding(toLength: width, withPad: " ", startingAt: 0))
         lines.append(banner)
         return lines
