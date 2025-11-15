@@ -158,4 +158,60 @@ struct EditorTests {
         #expect(text.contains("    column"))
         #expect(!text.contains("\u{0007}"))
     }
+
+    @Test
+    func arrowLeftAndRightMoveCursor() throws {
+        let editor = Editor()
+        editor.setText("hi")
+        editor.handle(input: .key(.arrowLeft, modifiers: []))
+        editor.handle(input: .raw("X"))
+        #expect(editor.getText() == "hXi")
+        editor.handle(input: .key(.arrowRight, modifiers: []))
+        editor.handle(input: .raw("!"))
+        #expect(editor.getText() == "hXi!")
+    }
+
+    @Test
+    func arrowUpAndDownNavigateLines() throws {
+        let editor = Editor()
+        editor.setText("foo\nbar")
+        editor.handle(input: .key(.arrowUp, modifiers: []))
+        editor.handle(input: .raw("*"))
+        #expect(editor.getText().starts(with: "foo*"))
+        editor.handle(input: .key(.arrowDown, modifiers: []))
+        editor.handle(input: .raw("!"))
+        #expect(editor.getText().hasSuffix("bar!"))
+    }
+
+    @Test
+    func homeAndEndKeysMoveToLineBounds() throws {
+        let editor = Editor()
+        editor.setText("hello")
+        editor.handle(input: .key(.home, modifiers: []))
+        editor.handle(input: .raw("X"))
+        #expect(editor.getText() == "Xhello")
+        editor.handle(input: .key(.end, modifiers: []))
+        editor.handle(input: .raw("!"))
+        #expect(editor.getText() == "Xhello!")
+    }
+
+    @Test
+    func deleteKeyRemovesForwardCharacters() throws {
+        let editor = Editor()
+        editor.setText("hello")
+        editor.handle(input: .key(.home, modifiers: []))
+        editor.handle(input: .key(.delete, modifiers: []))
+        #expect(editor.getText() == "ello")
+    }
+
+    @Test
+    func deleteKeyMergesNextLine() throws {
+        let editor = Editor()
+        editor.setText("foo\nbar")
+        editor.handle(input: .key(.home, modifiers: []))
+        editor.handle(input: .key(.arrowUp, modifiers: []))
+        editor.handle(input: .key(.end, modifiers: []))
+        editor.handle(input: .key(.delete, modifiers: []))
+        #expect(editor.getText() == "foobar")
+    }
 }
