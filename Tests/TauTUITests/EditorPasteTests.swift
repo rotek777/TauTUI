@@ -4,7 +4,7 @@ import Testing
 @Suite("Editor paste markers")
 struct EditorPasteTests {
     private func type(_ text: String, into editor: Editor) {
-        text.forEach { char in
+        for char in text {
             editor.handle(input: .key(.character(char)))
         }
     }
@@ -20,7 +20,7 @@ struct EditorPasteTests {
         let big2 = Array(repeating: "beta", count: 12).joined(separator: "\n")
 
         editor.handle(input: .paste(big1))
-        type(" middle ", into: editor)
+        self.type(" middle ", into: editor)
         editor.handle(input: .paste(big2))
         editor.handle(input: .key(.enter))
 
@@ -34,7 +34,7 @@ struct EditorPasteTests {
         editor.onSubmit = { submitted = $0 }
 
         editor.handle(input: .paste("hello")) // marker #1
-        type(" [paste #12 +x lines]", into: editor) // literal text, not real marker we created
+        self.type(" [paste #12 +x lines]", into: editor) // literal text, not real marker we created
         editor.handle(input: .key(.enter))
 
         #expect(submitted?.contains("[paste #12") == true)

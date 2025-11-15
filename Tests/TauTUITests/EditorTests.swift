@@ -9,7 +9,7 @@ private struct TestCommand: SlashCommand {
 }
 
 private func type(_ text: String, into editor: Editor) {
-    text.forEach { char in
+    for char in text {
         editor.handle(input: .key(.character(char)))
     }
 }
