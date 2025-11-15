@@ -1,5 +1,16 @@
 # TauTUI
 
+<div align="center">
+
+<p align="center">
+  <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-6.2+-FA7343?style=for-the-badge&logo=swift&logoColor=white" alt="Swift 6.2+"></a>
+  <a href="https://github.com/steipete/TauTUI"><img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-blue?style=for-the-badge" alt="Platforms"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License"></a>
+  <a href="https://github.com/steipete/TauTUI/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/steipete/TauTUI/ci.yml?branch=main&style=for-the-badge&label=tests" alt="CI Status"></a>
+</p>
+
+</div>
+
 TauTUI is a Swift 6 port of [@mariozechner/pi-tui](https://github.com/badlogic/pi-mono/tree/main/packages/tui): the same differential renderer, bracketed paste handling, autocomplete, and component set—implemented with Swift concurrency, value semantics, and native terminal plumbing for macOS + Linux.
 
 ## Features
