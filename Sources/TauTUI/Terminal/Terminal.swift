@@ -456,7 +456,7 @@ public final class ProcessTerminal: Terminal {
 
     private func currentTerminalSize() -> (columns: Int, rows: Int) {
         var windowSize = winsize()
-        if ioctl(self.outputFD.rawValue, TIOCGWINSZ, &windowSize) == 0 {
+        if ioctl(self.outputFD.rawValue, numericCast(TIOCGWINSZ), &windowSize) == 0 {
             let cols = Int(windowSize.ws_col)
             let rows = Int(windowSize.ws_row)
             return (max(cols, 1), max(rows, 1))
