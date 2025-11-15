@@ -8,6 +8,45 @@ private struct TestCommand: SlashCommand {
     func argumentCompletions(prefix: String) -> [AutocompleteItem] { [] }
 }
 
+private final class StubAutocompleteProvider: AutocompleteProvider {
+    var suggestion: AutocompleteSuggestion?
+    var triggerFileCompletion = true
+
+    func getSuggestions(
+        lines: [String],
+        cursorLine: Int,
+        cursorCol: Int) -> AutocompleteSuggestion?
+    {
+        self.suggestion
+    }
+
+    func applyCompletion(
+        lines: [String],
+        cursorLine: Int,
+        cursorCol: Int,
+        item: AutocompleteItem,
+        prefix: String) -> (lines: [String], cursorLine: Int, cursorCol: Int)
+    {
+        (lines, cursorLine, cursorCol)
+    }
+
+    func forceFileSuggestions(
+        lines: [String],
+        cursorLine: Int,
+        cursorCol: Int) -> AutocompleteSuggestion?
+    {
+        self.suggestion
+    }
+
+    func shouldTriggerFileCompletion(
+        lines: [String],
+        cursorLine: Int,
+        cursorCol: Int) -> Bool
+    {
+        self.triggerFileCompletion
+    }
+}
+
 @Suite("Editor")
 struct EditorTests {
     @Test
@@ -157,6 +196,38 @@ struct EditorTests {
         let text = editor.getText()
         #expect(text.contains("    column"))
         #expect(!text.contains("\u{0007}"))
+    }
+
+    @Test
+    func escapeCancelsAutocomplete() throws {
+        let provider = StubAutocompleteProvider()
+        let editor = Editor()
+        editor.setAutocompleteProvider(provider)
+
+        editor.handle(input: .raw("/cl"))
+        provider.suggestion = AutocompleteSuggestion(
+            items: [AutocompleteItem(value: "clear", label: "clear", description: nil)],
+            prefix: "/cl")
+        editor.handle(input: .key(.tab)) // open autocomplete list
+        let showing = editor.render(width: 20)
+
+        editor.handle(input: .key(.escape))
+        let hidden = editor.render(width: 20)
+        #expect(showing.count > hidden.count)
+    }
+
+    @Test
+    func tabSkipsWhenProviderDeclines() throws {
+        let provider = StubAutocompleteProvider()
+        provider.triggerFileCompletion = false
+        let editor = Editor()
+        editor.setAutocompleteProvider(provider)
+
+        editor.handle(input: .raw("hello"))
+        let before = editor.render(width: 20)
+        editor.handle(input: .key(.tab))
+        let after = editor.render(width: 20)
+        #expect(before == after)
     }
 
     @Test
