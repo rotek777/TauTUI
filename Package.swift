@@ -35,6 +35,14 @@ let package = Package(
                 .unsafeFlags(["-strict-concurrency=complete"], .when(platforms: [.macOS, .linux]))
             ]
         ),
+        .target(
+            name: "TauTUIInternal",
+            dependencies: ["TauTUI"],
+            path: "Sources/TauTUIInternal",
+            swiftSettings: [
+                .unsafeFlags(["-strict-concurrency=complete"], .when(platforms: [.macOS, .linux]))
+            ]
+        ),
         .executableTarget(
             name: "ChatDemo",
             dependencies: ["TauTUI"],
@@ -42,7 +50,8 @@ let package = Package(
         ),
         .testTarget(
             name: "TauTUITests",
-            dependencies: ["TauTUI"]
+            dependencies: ["TauTUI", "TauTUIInternal"],
+            path: "Tests/TauTUITests"
         ),
     ]
 )

@@ -39,9 +39,9 @@ These tweaks are low-to-medium effort improvements identified during the port. T
 **Action:** Terminal now recognizes Option+Delete via CSI modifier codes and Meta-prefix ESC+DEL; Editor deletes the word ahead (Alt+D parity) with coverage in `EditorTests`.
 **Benefit:** Closer to pi-tui keybinding behavior with tests to guard regressions.
 
-## 8) Package/Build Tweaks
-- Consider a `TauTUIInternal` target for test-only utilities (VirtualTerminal) to keep public API surface lean.
-- Add `SWIFT_STRICT_CONCURRENCY=complete` to CI to ensure new code stays warning-free.
+## 8) Package/Build Tweaks (Done)
+- Added package-level strict concurrency flag (`-strict-concurrency=complete`) for TauTUI target to guard future changes.
+- Still consider a `TauTUIInternal` target for test-only utilities (VirtualTerminal) if API surface becomes a concern.
 
 ## Suggested Order
 1. ANSI helper (1)

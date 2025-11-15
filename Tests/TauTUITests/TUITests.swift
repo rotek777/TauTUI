@@ -1,5 +1,6 @@
 import Testing
 @testable import TauTUI
+@testable import TauTUIInternal
 
 private final class DummyComponent: Component {
     var lines: [String]
