@@ -71,7 +71,10 @@ struct ChatDemo {
             try vm.tui.start()
             RunLoop.main.run()
         } catch {
-            fputs("Failed to start TUI: \(error)\n", stderr)
+            let message = "Failed to start TUI: \(error)\n"
+            if let data = message.data(using: .utf8) {
+                try? FileHandle.standardError.write(contentsOf: data)
+            }
             exit(1)
         }
     }
