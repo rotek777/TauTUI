@@ -1,5 +1,12 @@
+import Foundation
 import Testing
 @testable import TauTUI
+
+private struct TestCommand: SlashCommand {
+    let name: String
+    let description: String? = nil
+    func argumentCompletions(prefix: String) -> [AutocompleteItem] { [] }
+}
 
 @Suite("Editor")
 struct EditorTests {
@@ -110,5 +117,45 @@ struct EditorTests {
         let editor = Editor()
         editor.handle(input: .raw("\\\r"))
         #expect(editor.getText() == "\n")
+    }
+
+    @Test
+    func tabForcesFileAutocomplete() throws {
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temp) }
+        FileManager.default.createFile(atPath: temp.appendingPathComponent("hello.txt").path, contents: Data())
+
+        let provider = CombinedAutocompleteProvider(basePath: temp.path)
+        let editor = Editor()
+        editor.setAutocompleteProvider(provider)
+
+        editor.handle(input: .raw("hel"))
+        editor.handle(input: .key(.tab, modifiers: [])) // show suggestions
+        editor.handle(input: .key(.tab, modifiers: [])) // accept first item
+
+        #expect(editor.getText().contains("hello.txt"))
+    }
+
+    @Test
+    func slashCommandsTabComplete() throws {
+        let provider = CombinedAutocompleteProvider(commands: [TestCommand(name: "clear")])
+        let editor = Editor()
+        editor.setAutocompleteProvider(provider)
+
+        editor.handle(input: .raw("/cl"))
+        editor.handle(input: .key(.tab, modifiers: []))
+        editor.handle(input: .key(.tab, modifiers: []))
+
+        #expect(editor.getText().hasPrefix("/clear "))
+    }
+
+    @Test
+    func pasteFiltersControlCharacters() throws {
+        let editor = Editor()
+        editor.handle(input: .paste("\tcolumn\u{0007}\nline"))
+        let text = editor.getText()
+        #expect(text.contains("    column"))
+        #expect(!text.contains("\u{0007}"))
     }
 }

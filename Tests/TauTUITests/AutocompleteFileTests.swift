@@ -49,9 +49,9 @@ struct AutocompleteFileTests {
             return
         }
         let values = Set(items.map(\.value))
-        #expect(values.contains("image.png"))
-        #expect(values.contains("note.md"))
-        #expect(!values.contains("archive.bin")) // filtered out as non-attachable
+        #expect(values.contains("@image.png"))
+        #expect(values.contains("@note.md"))
+        #expect(!values.contains("@archive.bin")) // filtered out as non-attachable
     }
 
     @Test
@@ -80,5 +80,23 @@ struct AutocompleteFileTests {
         // Directories should still be first even when capped.
         let labels = items.map(\.label)
         #expect(labels.prefix(3).allSatisfy { $0.hasSuffix("/") })
+    }
+
+    @Test
+    func forcedSuggestionsWorkWithoutPathDelimiters() throws {
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        FileManager.default.createFile(atPath: temp.appendingPathComponent("hello.txt").path, contents: Data())
+
+        let provider = CombinedAutocompleteProvider(basePath: temp.path)
+        let lines = ["hel"]
+        let forced = provider.forceFileSuggestions(lines: lines, cursorLine: 0, cursorCol: 3)
+        guard let items = forced?.items else {
+            Issue.record("expected forced suggestions")
+            return
+        }
+        #expect(items.contains(where: { $0.value.contains("hello.txt") }))
     }
 }

@@ -24,6 +24,16 @@ struct AutocompleteTests {
     }
 
     @Test
+    func inlineCommandItemsAppear() async throws {
+        let provider = CombinedAutocompleteProvider(
+            commands: [],
+            staticCommands: [AutocompleteItem(value: "clear", label: "clear", description: "wipe output")])
+        let lines = ["/cl"]
+        let suggestion = provider.getSuggestions(lines: lines, cursorLine: 0, cursorCol: 3)
+        #expect(suggestion?.items.first?.value == "clear")
+    }
+
+    @Test
     func fileSuggestions() async throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)

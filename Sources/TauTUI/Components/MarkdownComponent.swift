@@ -12,17 +12,40 @@ public final class MarkdownComponent: Component {
         }
     }
 
+    public struct Foreground {
+        public var red: UInt8
+        public var green: UInt8
+        public var blue: UInt8
+
+        public init(red: UInt8, green: UInt8, blue: UInt8) {
+            self.red = red
+            self.green = green
+            self.blue = blue
+        }
+
+        var ansiPrefix: String {
+            "\u{001B}[38;2;\(self.red);\(self.green);\(self.blue)m"
+        }
+    }
+
     public var text: String { didSet { self.invalidateCache() } }
     public var padding: Padding { didSet { self.invalidateCache() } }
     public var background: Text.Background? { didSet { self.invalidateCache() } }
+    public var foreground: Foreground? { didSet { self.invalidateCache() } }
 
     private var cachedWidth: Int?
     private var cachedLines: [String]?
 
-    public init(text: String = "", padding: Padding = Padding(), background: Text.Background? = nil) {
+    public init(
+        text: String = "",
+        padding: Padding = Padding(),
+        background: Text.Background? = nil,
+        foreground: Foreground? = nil)
+    {
         self.text = text
         self.padding = padding
         self.background = background
+        self.foreground = foreground
     }
 
     public func render(width: Int) -> [String] {
@@ -39,25 +62,32 @@ public final class MarkdownComponent: Component {
         var result: [String] = []
 
         for _ in 0..<self.padding.vertical {
-            result.append(self.applyBackground(to: emptyLine))
+            result.append(self.applyColors(to: emptyLine))
         }
         for line in renderer.lines {
             let visible = VisibleWidth.measure(line)
             let right = max(0, width - self.padding.horizontal - visible)
             let padded = leftPad + line + String(repeating: " ", count: right)
-            result.append(self.applyBackground(to: padded))
+            result.append(self.applyColors(to: padded))
         }
         for _ in 0..<self.padding.vertical {
-            result.append(self.applyBackground(to: emptyLine))
+            result.append(self.applyColors(to: emptyLine))
         }
 
         self.cache(width: width, lines: result)
         return result
     }
 
-    private func applyBackground(to line: String) -> String {
-        guard let background else { return line }
-        return background.ansiPrefix + line + "\u{001B}[0m"
+    private func applyColors(to line: String) -> String {
+        var prefix = ""
+        if let background {
+            prefix += background.ansiPrefix
+        }
+        if let foreground {
+            prefix += foreground.ansiPrefix
+        }
+        guard !prefix.isEmpty else { return line }
+        return prefix + line + "\u{001B}[0m"
     }
 
     private func invalidateCache() {

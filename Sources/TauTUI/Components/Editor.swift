@@ -182,7 +182,7 @@ public final class Editor: Component {
                 self.submit()
             }
         case .tab:
-            self.triggerAutocomplete(explicit: true)
+            self.handleTabCompletion()
         case .escape:
             self.cancelAutocomplete()
         case .backspace:
@@ -327,14 +327,25 @@ public final class Editor: Component {
 
     private func handlePaste(_ text: String) {
         let normalized = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
-        let lines = normalized.split(separator: "\n", omittingEmptySubsequences: false)
-        if lines.count > 10 || normalized.count > 1000 {
+        let spacesExpanded = normalized.replacingOccurrences(of: "\t", with: "    ")
+        let sanitized = spacesExpanded.reduce(into: "") { partial, char in
+            if char == "\n" {
+                partial.append(char)
+                return
+            }
+            guard let scalar = char.unicodeScalars.first else { return }
+            if scalar.value >= 32 && scalar.value <= 126 {
+                partial.append(char)
+            }
+        }
+        let lines = sanitized.split(separator: "\n", omittingEmptySubsequences: false)
+        if lines.count > 10 || sanitized.count > 1000 {
             self.pasteCounter += 1
-            self.pastes[self.pasteCounter] = normalized
+            self.pastes[self.pasteCounter] = sanitized
             let marker = if lines.count > 10 {
                 "[paste #\(self.pasteCounter) +\(lines.count) lines]"
             } else {
-                "[paste #\(self.pasteCounter) \(normalized.count) chars]"
+                "[paste #\(self.pasteCounter) \(sanitized.count) chars]"
             }
             for char in marker {
                 self.insertCharacter(String(char))
@@ -370,37 +381,19 @@ public final class Editor: Component {
 
     private func triggerAutocomplete(explicit: Bool) {
         guard let provider = autocompleteProvider else { return }
+        if explicit, !provider.shouldTriggerFileCompletion(
+            lines: self.buffer.lines,
+            cursorLine: self.buffer.cursorLine,
+            cursorCol: self.buffer.cursorCol)
+        {
+            return
+        }
         let suggestion = provider.getSuggestions(
             lines: self.buffer.lines,
             cursorLine: self.buffer.cursorLine,
             cursorCol: self.buffer.cursorCol)
         if let suggestion {
-            self.autocompletePrefix = suggestion.prefix
-            self.autocompleteList = SelectList(
-                items: suggestion.items
-                    .map { SelectItem(value: $0.value, label: $0.label, description: $0.description) },
-                maxVisible: 5)
-            self.autocompleteList?.onSelect = { [weak self] selected in
-                guard let self else { return }
-                let result = provider.applyCompletion(
-                    lines: self.buffer.lines,
-                    cursorLine: self.buffer.cursorLine,
-                    cursorCol: self.buffer.cursorCol,
-                    item: AutocompleteItem(
-                        value: selected.value,
-                        label: selected.label,
-                        description: selected.description),
-                    prefix: suggestion.prefix)
-                self.buffer = self.withMutatingBuffer { buf in
-                    buf.lines = result.lines
-                    buf.cursorLine = result.cursorLine
-                    buf.cursorCol = result.cursorCol
-                }
-                self.cancelAutocomplete()
-                self.onChange?(self.getText())
-            }
-            self.autocompleteList?.onCancel = { [weak self] in self?.cancelAutocomplete() }
-            self.isAutocompleting = true
+            self.presentAutocomplete(provider: provider, suggestion: suggestion)
         } else {
             self.cancelAutocomplete()
         }
@@ -413,11 +406,7 @@ public final class Editor: Component {
             cursorLine: self.buffer.cursorLine,
             cursorCol: self.buffer.cursorCol)
         if let suggestion {
-            self.autocompletePrefix = suggestion.prefix
-            self.autocompleteList = SelectList(
-                items: suggestion.items
-                    .map { SelectItem(value: $0.value, label: $0.label, description: $0.description) },
-                maxVisible: 5)
+            self.presentAutocomplete(provider: provider, suggestion: suggestion)
         } else {
             self.cancelAutocomplete()
         }
@@ -454,6 +443,64 @@ public final class Editor: Component {
         }
         self.cancelAutocomplete()
         self.onChange?(self.getText())
+    }
+
+    private func handleTabCompletion() {
+        guard self.autocompleteProvider != nil else { return }
+        let currentLine = self.buffer.lines[self.buffer.cursorLine]
+        let cursorIndex = currentLine.index(currentLine.startIndex, offsetBy: min(self.buffer.cursorCol, currentLine.count))
+        let beforeCursor = String(currentLine[..<cursorIndex])
+        if beforeCursor.trimmingCharacters(in: .whitespaces).hasPrefix("/") {
+            self.handleSlashCommandCompletion()
+        } else {
+            self.forceFileAutocomplete()
+        }
+    }
+
+    private func handleSlashCommandCompletion() {
+        self.triggerAutocomplete(explicit: true)
+    }
+
+    private func forceFileAutocomplete() {
+        guard let provider = autocompleteProvider else { return }
+        if let suggestion = provider.forceFileSuggestions(
+            lines: self.buffer.lines,
+            cursorLine: self.buffer.cursorLine,
+            cursorCol: self.buffer.cursorCol)
+        {
+            self.presentAutocomplete(provider: provider, suggestion: suggestion)
+        } else {
+            self.triggerAutocomplete(explicit: true)
+        }
+    }
+
+    private func presentAutocomplete(provider: AutocompleteProvider, suggestion: AutocompleteSuggestion) {
+        self.autocompletePrefix = suggestion.prefix
+        self.autocompleteList = SelectList(
+            items: suggestion.items
+                .map { SelectItem(value: $0.value, label: $0.label, description: $0.description) },
+            maxVisible: 5)
+        self.autocompleteList?.onSelect = { [weak self] selected in
+            guard let self else { return }
+            let result = provider.applyCompletion(
+                lines: self.buffer.lines,
+                cursorLine: self.buffer.cursorLine,
+                cursorCol: self.buffer.cursorCol,
+                item: AutocompleteItem(
+                    value: selected.value,
+                    label: selected.label,
+                    description: selected.description),
+                prefix: self.autocompletePrefix)
+            self.buffer = self.withMutatingBuffer { buf in
+                buf.lines = result.lines
+                buf.cursorLine = result.cursorLine
+                buf.cursorCol = result.cursorCol
+            }
+            self.cancelAutocomplete()
+            self.onChange?(self.getText())
+        }
+        self.autocompleteList?.onCancel = { [weak self] in self?.cancelAutocomplete() }
+        self.isAutocompleting = true
     }
 
     /// Helper to mutate the value-type buffer while keeping `Editor` reference semantics.

@@ -1,19 +1,23 @@
 # TauTUI
 
-TauTUI is an idiomatic Swift 6 port of [@mariozechner/pi-tui](https://github.com/badlogic/pi-mono/tree/main/packages/tui), Mario Zechner’s excellent TypeScript terminal UI toolkit. The goal is feature parity—differential rendering with synchronized output, bracketed paste support, markdown/text components, autocomplete, and the powerful editor—implemented with Swift-first APIs and testability in mind.
+TauTUI is an idiomatic Swift 6 port of [@mariozechner/pi-tui](https://github.com/badlogic/pi-mono/tree/main/packages/tui), Mario Zechner’s TypeScript terminal UI framework. It delivers the same feature set—differential rendering with synchronized output, bracketed paste handling, slash/file autocomplete, Markdown/Text components, SelectLists, spinners, editor, and VirtualTerminal harness—expressed with Swift concurrency, value types, and strong typing.
 
-> ⚠️ **Work in progress**: only scaffolding, terminal plumbing, the differential renderer, and some basic components exist today. Follow `docs/spec.md` for the full migration plan.
-
-## Why
-- Keep pi-tui’s rock-solid design while exposing Swift idioms (value types, enums, `@Sendable` closures).
-- Deliver a pure-Swift foundation for macOS + Linux terminal apps (Windows consoles will not be supported initially).
-- Provide a thoroughly tested runtime: VirtualTerminal harness, Swift Tests translated from the original Node specs, and examples like the chat + key tester demos.
+## Features
+- **Differential renderer** with CSI 2026 synchronized output and resize-aware fallbacks.
+- **Terminal plumbing**: raw-mode `ProcessTerminal`, key/modifier normalization, optional `VirtualTerminal` for tests.
+- **Rich editor + autocomplete**: slash-command + filesystem completion, Tab-forced suggestions, paste markers, modifier-aware shortcuts.
+- **Components**: Markdown (with RGB background/foreground), Text, Input, SelectList, Loader, Spacer, plus utilities like `VisibleWidth`.
+- **Examples & tools**: `ChatDemo` mirrors `test/chat-simple.ts`, and `KeyTester` is the Swift rewrite of pi-tui’s key logger.
+- **Tests**: SwiftPM test suite ports the Node specs (markdown rendering, autocomplete, editor behaviors, renderer snapshots).
 
 ## Quick Start
-Add TauTUI to your project once the runtime lands:
+
+Add TauTUI as a dependency and build an app:
 
 ```swift
 // swift-tools-version: 6.2
+import PackageDescription
+
 let package = Package(
     dependencies: [
         .package(url: "https://github.com/yourname/TauTUI.git", branch: "main"),
@@ -29,35 +33,32 @@ let package = Package(
 )
 ```
 
-Then compose components similar to pi-tui, but in Swift:
-
 ```swift
 import TauTUI
 
 let terminal = ProcessTerminal()
-let tui = /* upcoming TUI runtime */
+let tui = TUI(terminal: terminal)
+let text = Text(text: "Welcome to TauTUI!")
+let editor = Editor()
+editor.onSubmit = { value in
+    tui.addChild(MarkdownComponent(text: value))
+    tui.requestRender()
+}
+tui.addChild(text)
+tui.addChild(editor)
+tui.setFocus(editor)
+try tui.start()
+RunLoop.main.run()
 ```
 
-Full examples (chat demo, key tester) will live under `Examples/` once the port reaches parity.
+## Examples
+- `swift run ChatDemo` — Chat-like UI with slash commands, autocomplete, loader, and Markdown components.
+- `swift run KeyTester` — Interactive logger that prints raw input, modifiers, and codes for debugging terminal keybindings.
 
 ## Platform Support
-- ✅ macOS 13+ (Darwin, Swift 6 toolchains)
-- ✅ Linux (glibc-based distros tested via CI)
-- ❌ Windows consoles are not supported.
-
-## Examples
-- `swift run ChatDemo` launches a minimal chat-like interface showcasing `TUI`, `Editor`, autocomplete, and loaders. Source lives under `Examples/ChatDemo` and mirrors the `test/chat-simple.ts` experience from pi-tui.
+- ✅ macOS 13+ (Swift 6)
+- ✅ Linux (glibc)
+- ❌ Windows consoles (not supported)
 
 ## Credits
-Huge thanks to Mario Zechner and the pi-tui contributors—the architecture, rendering strategy, and components originate from their work. TauTUI’s README, docs, and source files will continue to highlight that lineage.
-
-## Development status
-- [x] Spec + scaffolding (`docs/spec.md`)
-- [x] VisibleWidth/ANSI helpers (baseline implementation)
-- [x] Terminal runtime scaffolding (raw mode, bracketed paste, base renderer)
-- [x] Core components: Spacer, Text, Markdown, Input, SelectList, Loader, Editor (baseline)
-- [x] Autocomplete provider + filesystem hooks
-- [ ] Editor + Loader ports
-- [ ] Examples + Swift Test parity suite
-
-If you want to track progress or contribute, start with `docs/spec.md` for the authoritative plan.
+Huge thanks to Mario Zechner and the pi-tui contributors—the architecture, rendering strategy, and component APIs originate from their work. See `docs/spec.md` for the full migration plan and roadmap.

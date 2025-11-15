@@ -84,4 +84,15 @@ struct MarkdownTests {
         #expect(plain.contains(where: { $0.contains("Col1") }))
         #expect(plain.contains(where: { $0.contains("│") }))
     }
+
+    @Test
+    func foregroundColorIsApplied() async throws {
+        let component = MarkdownComponent(
+            text: "colored",
+            padding: .init(horizontal: 0, vertical: 0),
+            background: nil,
+            foreground: .init(red: 10, green: 20, blue: 30))
+        let rendered = component.render(width: 20)
+        #expect(rendered.contains(where: { $0.contains("\u{001B}[38;2;10;20;30m") }))
+    }
 }

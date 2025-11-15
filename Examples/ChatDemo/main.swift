@@ -14,7 +14,10 @@ final class ChatViewModel {
         self.tui = TUI(terminal: terminal)
         // Autocomplete mirrors pi-tui: slash commands + file paths rooted at cwd.
         self.autocomplete = CombinedAutocompleteProvider(
-            commands: [DemoCommand()],
+            commands: [
+                DemoCommand(name: "clear", description: "Clear all messages"),
+                DemoCommand(name: "delete", description: "Delete the last user message"),
+            ],
             basePath: FileManager.default.currentDirectoryPath)
         self.editor.setAutocompleteProvider(self.autocomplete)
     }
@@ -44,6 +47,13 @@ struct ChatDemo {
 
             if trimmed == "/clear" {
                 vm.messages.clear()
+                vm.tui.requestRender()
+                return
+            }
+            if trimmed == "/delete" {
+                if let last = vm.messages.children.last {
+                    vm.messages.removeChild(last)
+                }
                 vm.tui.requestRender()
                 return
             }
@@ -81,8 +91,8 @@ struct ChatDemo {
 }
 
 private struct DemoCommand: SlashCommand {
-    let name = "clear"
-    let description: String? = "Clear all messages"
+    let name: String
+    let description: String?
 
     func argumentCompletions(prefix: String) -> [AutocompleteItem] { [] }
 }

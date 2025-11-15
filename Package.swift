@@ -15,6 +15,9 @@ let package = Package(
         .executable(
             name: "ChatDemo",
             targets: ["ChatDemo"]),
+        .executable(
+            name: "KeyTester",
+            targets: ["KeyTester"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-markdown.git", from: "0.7.3"),
@@ -43,6 +46,10 @@ let package = Package(
             name: "ChatDemo",
             dependencies: ["TauTUI"],
             path: "Examples/ChatDemo"),
+        .executableTarget(
+            name: "KeyTester",
+            dependencies: ["TauTUI"],
+            path: "Examples/KeyTester"),
         .testTarget(
             name: "TauTUITests",
             dependencies: ["TauTUI", "TauTUIInternal"],
