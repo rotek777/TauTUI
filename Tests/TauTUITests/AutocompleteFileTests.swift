@@ -49,5 +49,30 @@ struct AutocompleteFileTests {
         #expect(values.contains("note.md"))
         #expect(!values.contains("archive.bin")) // filtered out as non-attachable
     }
-}
 
+    @Test
+    func fileSuggestionsAreCappedAtTen() throws {
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        // create 3 dirs + 10 files (13 total) to ensure capping at 10
+        for name in ["a", "b", "c"] {
+            try FileManager.default.createDirectory(at: temp.appendingPathComponent(name), withIntermediateDirectories: false)
+        }
+        for i in 0..<10 {
+            FileManager.default.createFile(atPath: temp.appendingPathComponent("file\(i).txt").path, contents: Data())
+        }
+
+        let provider = CombinedAutocompleteProvider(commands: [], basePath: temp.path)
+        let result = provider.getSuggestions(lines: ["./"], cursorLine: 0, cursorCol: 2)
+        guard let items = result?.items else {
+            Issue.record("expected suggestions")
+            return
+        }
+        #expect(items.count == 10)
+        // Directories should still be first even when capped.
+        let labels = items.map { $0.label }
+        #expect(labels.prefix(3).allSatisfy { $0.hasSuffix("/") })
+    }
+}
