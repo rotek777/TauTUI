@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2025-11-21
+- Add global theming: `ThemePalette` dark/light presets, `apply(theme:)` on TUI/components, ChatDemo `/theme` toggle, KeyTester uses light theme.
+- ANSI-aware wrapping/background helper shared across Text/Markdown; new `TruncatedText` aligns truncation/padding with pi-tui.
+- Input parity: buffers bracketed paste markers and strips newlines before insert.
+- Added tests for wrapping, truncation, theme propagation; docs/spec/sync notes updated.
+
 ## [0.1.1] - 2025-11-17
 - Allow printable Unicode in editor paste path (drops only control characters) to match upstream pi-tui Unicode input behavior.
 - Add Unicode-focused editor tests (emoji, umlauts, cursor movement, control-char stripping).
