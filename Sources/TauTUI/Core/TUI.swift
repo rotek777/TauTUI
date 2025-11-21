@@ -163,4 +163,9 @@ public final class TUI: Container {
         buffer += ANSI.syncEnd
         self.terminal.write(buffer)
     }
+
+    /// Testing/debug helper: render synchronously instead of via requestRender().
+    public func renderNow() {
+        self.performRender()
+    }
 }

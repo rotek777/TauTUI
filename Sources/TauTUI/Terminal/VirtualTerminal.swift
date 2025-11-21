@@ -123,6 +123,15 @@ public final class VirtualTerminal: Terminal {
         self.resizeHandler?()
     }
 
+    /// Current rendered lines including pending line (scrollback wide).
+    public func snapshotLines() -> [String] {
+        var lines = self.scrollback
+        if !self.pendingLine.isEmpty {
+            lines.append(self.pendingLine)
+        }
+        return lines
+    }
+
     private func captureOutput(_ data: String) {
         var normalized = data
         if normalized.contains(ANSI.clearScrollbackAndScreen) {

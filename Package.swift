@@ -53,6 +53,13 @@ let package = Package(
             name: "KeyTester",
             dependencies: ["TauTUI"],
             path: "Examples/KeyTester"),
+        .executableTarget(
+            name: "TTYSampler",
+            dependencies: ["TauTUI"],
+            path: "Examples/TTYSampler",
+            resources: [
+                .copy("sample.json"),
+            ]),
         .testTarget(
             name: "TauTUITests",
             dependencies: ["TauTUI", "TauTUIInternal"],
