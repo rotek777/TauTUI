@@ -173,7 +173,10 @@ public final class MarkdownComponent: Component {
         }
 
         if let background = style.background {
-            styled = AnsiWrapping.applyBackgroundToLine(styled, width: VisibleWidth.measure(line), background: background)
+            styled = AnsiWrapping.applyBackgroundToLine(
+                styled,
+                width: VisibleWidth.measure(line),
+                background: background)
         }
 
         return styled

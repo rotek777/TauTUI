@@ -28,7 +28,7 @@ public enum AnsiWrapping {
         var result: [String] = []
         var tracker = AnsiCodeTracker()
 
-        let words = splitIntoWordsWithAnsi(line)
+        let words = self.splitIntoWordsWithAnsi(line)
         var current = ""
         var currentVisible = 0
 
@@ -38,15 +38,15 @@ public enum AnsiWrapping {
             if wordVisible > width {
                 // Flush current line before breaking long word
                 if !current.isEmpty {
-                    result.append(closeLine(current, tracker: tracker))
+                    result.append(self.closeLine(current, tracker: tracker))
                     current = tracker.activeCodes
                     currentVisible = 0
                 }
 
-                let broken = breakLongWord(word, width: width, tracker: &tracker)
+                let broken = self.breakLongWord(word, width: width, tracker: &tracker)
                 // All but last are complete lines
                 if broken.count > 1 {
-                    result.append(contentsOf: broken.dropLast().map { closeLine($0, tracker: tracker) })
+                    result.append(contentsOf: broken.dropLast().map { self.closeLine($0, tracker: tracker) })
                 }
                 if let last = broken.last {
                     current = last
@@ -57,7 +57,7 @@ public enum AnsiWrapping {
 
             let needsSpace = currentVisible > 0 ? 1 : 0
             if currentVisible + needsSpace + wordVisible > width {
-                result.append(closeLine(current, tracker: tracker))
+                result.append(self.closeLine(current, tracker: tracker))
                 current = tracker.activeCodes + word
                 currentVisible = wordVisible
             } else {
@@ -73,7 +73,7 @@ public enum AnsiWrapping {
         }
 
         if !current.isEmpty {
-            result.append(closeLine(current, tracker: tracker))
+            result.append(self.closeLine(current, tracker: tracker))
         }
 
         return result.isEmpty ? [""] : result
@@ -96,7 +96,7 @@ public enum AnsiWrapping {
             let char = String(word[index])
             let charWidth = VisibleWidth.measure(char)
             if currentVisible + charWidth > width {
-                lines.append(closeLine(current, tracker: tracker))
+                lines.append(self.closeLine(current, tracker: tracker))
                 current = tracker.activeCodes
                 currentVisible = 0
             }
@@ -155,7 +155,7 @@ public enum AnsiWrapping {
         var current = text.index(after: index)
         while current < text.endIndex {
             let scalar = text[current].unicodeScalars.first!.value
-            if scalar >= 0x40 && scalar <= 0x7E { // final byte of CSI / SGR
+            if scalar >= 0x40, scalar <= 0x7E { // final byte of CSI / SGR
                 let next = text.index(after: current)
                 return (String(text[index..<next]), next)
             }

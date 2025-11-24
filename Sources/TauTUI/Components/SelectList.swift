@@ -36,8 +36,7 @@ public struct SelectListTheme: Sendable {
         selectedText: { AnsiStyling.color(34)(AnsiStyling.bold($0)) },
         description: { "\u{001B}[90m\($0)\u{001B}[0m" },
         scrollInfo: { "\u{001B}[90m\($0)\u{001B}[0m" },
-        noMatch: { "\u{001B}[90m\($0)\u{001B}[0m" }
-    )
+        noMatch: { "\u{001B}[90m\($0)\u{001B}[0m" })
 }
 
 public final class SelectList: Component {

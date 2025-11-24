@@ -66,6 +66,6 @@ public protocol ThemeUpdatable: AnyObject {
     func apply(theme: ThemePalette)
 }
 
-public extension ThemeUpdatable {
-    func apply(theme: ThemePalette) {}
+extension ThemeUpdatable {
+    public func apply(theme: ThemePalette) {}
 }

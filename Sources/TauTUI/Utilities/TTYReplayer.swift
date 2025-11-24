@@ -34,8 +34,8 @@ public struct TTYReplayResult: Sendable {
 @MainActor
 public func replayTTY(
     script: TTYScript,
-    buildTUI: (VirtualTerminal) throws -> TUI
-) throws -> TTYReplayResult {
+    buildTUI: (VirtualTerminal) throws -> TUI) throws -> TTYReplayResult
+{
     let vt = VirtualTerminal(columns: script.columns ?? 80, rows: script.rows ?? 24)
     let tui = try buildTUI(vt)
     try tui.start()

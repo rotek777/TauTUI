@@ -40,7 +40,7 @@ public final class TUI: Container {
         self.terminal.stop()
     }
 
-    @MainActor public override func apply(theme: ThemePalette) {
+    @MainActor override public func apply(theme: ThemePalette) {
         self.theme = theme
         self.children.forEach { $0.apply(theme: theme) }
         self.invalidate()

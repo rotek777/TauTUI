@@ -12,9 +12,9 @@ public final class Loader: Component {
 
         public static let `default` = LoaderTheme(
             spinner: AnsiStyling.color(36),
-            message: { AnsiStyling.dim($0) }
-        )
+            message: { AnsiStyling.dim($0) })
     }
+
     private enum RenderTarget {
         // Custom render notifier lets tests drive the loader without a TUI.
         case closure(() -> Void)
@@ -57,7 +57,12 @@ public final class Loader: Component {
         if autoStart { self.start() }
     }
 
-    public init(message: String = "Loading...", autoStart: Bool = true, theme: LoaderTheme = .default, renderNotifier: @escaping () -> Void) {
+    public init(
+        message: String = "Loading...",
+        autoStart: Bool = true,
+        theme: LoaderTheme = .default,
+        renderNotifier: @escaping () -> Void)
+    {
         self.renderTarget = .closure(renderNotifier)
         self.message = message
         self.theme = theme

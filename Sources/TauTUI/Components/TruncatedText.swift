@@ -80,7 +80,7 @@ public final class TruncatedText: Component {
         var current = text.index(after: index)
         while current < text.endIndex {
             let scalar = text[current].unicodeScalars.first!.value
-            if scalar >= 0x40 && scalar <= 0x7E {
+            if scalar >= 0x40, scalar <= 0x7E {
                 let next = text.index(after: current)
                 return (String(text[index..<next]), next)
             }
